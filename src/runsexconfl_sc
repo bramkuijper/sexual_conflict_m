@@ -1,0 +1,14 @@
+./xsexconfl_sc 3 0.05 0.05 0.05 0.01 0.01 0.01 0.05 0.05 0.05 0.25 0.1
+
+
+#	a = atof(argv[1]);
+#	co = atof(argv[2]);
+#	ct = atof(argv[3]);
+#	cs = atof(argv[4]);
+#	mu_off = atof(argv[5]);
+#	mu_thr = atof(argv[6]);
+#	mu_sen = atof(argv[7]);
+#	sdmu_off = atof(argv[8]);
+#	sdmu_thr = atof(argv[9]);
+#	sdmu_sen = atof(argv[10]);
+#    theta_psi = atof(argv[11]);
