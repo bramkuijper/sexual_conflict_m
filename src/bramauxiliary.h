@@ -6,8 +6,21 @@
 #include <iostream>
 #include <sstream>
 #include <cmath>
-//#include <gsl/gsl_cdf.h>
 
+//#define WINDOWS_32_Q
+#define NOGSL
+
+#include <ctime>
+#include <string>
+
+#ifdef WINDOWS_32_Q
+#include <windows.h>
+#define NOGSL
+#endif
+
+#ifndef NOGSL
+#include <gsl/gsl_cdf.h>
+#endif 
 // convert from integer to string
 std::string itos(int j)
 {
@@ -16,8 +29,40 @@ std::string itos(int j)
 	return s.str();
 }
 
+// convert double to string (doesn't work though...)
+std::string dtos(double j)
+{
+    std::stringstream s;
+    s << j;
 
-// filename function 
+    return s.str();
+}
+
+unsigned get_nanoseconds()
+{
+#ifndef WINDOWS_32_Q
+
+	timespec ts;
+
+	if (0!=clock_gettime(CLOCK_REALTIME,&ts))
+	{
+		throw "error in getting the real time stamp in nanosecs, quitting!";
+	}
+
+	return(ts.tv_nsec);
+
+#endif
+
+#ifdef WINDOWS_32_Q
+	SYSTEMTIME SystemTime;
+
+	GetSystemTime(&SystemTime);
+
+	return(SystemTime.wMilliseconds);
+#endif
+}
+
+
 std::string create_filename(std::string filename)
 {
 	time_t timep = time(NULL);
@@ -57,27 +102,9 @@ std::string create_filename(std::string filename)
 
 	// now we are going to insert microsecs
 	// to obtain unique filename
-	timespec ts;
-	if (0!=clock_gettime(CLOCK_REALTIME,&ts))
-	{
-		throw "error in getting the real time stamp in nanosecs, quitting!";
-	}
-
-	filename.append(itos(ts.tv_nsec));
+	filename.append(itos(get_nanoseconds()));
 
 	return(filename);
-}
-
-unsigned get_nanoseconds()
-{
-	timespec ts;
-
-	if (0!=clock_gettime(CLOCK_REALTIME,&ts))
-	{
-		throw "error in getting the real time stamp in nanosecs, quitting!";
-	}
-
-	return(ts.tv_nsec);
 }
 
 int linear_search(const int list[], const int maxsize, int value)
@@ -174,10 +201,15 @@ void stat_finalize(Stats &results)
     { 
         results.mean /= results.sample;
         results.var = results.sumsquares == 0 ? 0 : results.sumsquares / results.sample - pow(results.mean,2);
+#ifdef WINDOWS_32_Q
+        results.mean_ci = 0;
+#endif
 
-        results.mean_ci = 0; //results.sample > 1 ? gsl_cdf_tdist_Qinv(0.025,results.sample - 1) * results.var / sqrt(results.sample) : 0;
-        results.skew = results.sample > 3 ? results.sumthirds / results.sample - 3 * results.mean * results.sumsquares / results.sample + 2 * pow(results.mean,3) : 0;
-        results.kurt = results.sample > 4 ? (double) (results.sumfourths / results.sample - 4 * results.sumthirds / results.sample * results.mean + 6 * pow(results.mean,2) * results.sumsquares / results.sample - 3 * pow(results.mean,4)) : 0;
+#ifndef NOGSL
+        results.mean_ci = gsl_cdf_tdist_Qinv(0.025,results.sample - 1) * results.var / sqrt(results.sample);
+#endif
+        results.skew = results.sumthirds / results.sample - 3 * results.mean * results.sumsquares / results.sample + 2 * pow(results.mean,3);
+        results.kurt = (double) (results.sumfourths / results.sample - 4 * results.sumthirds / results.sample * results.mean + 6 * pow(results.mean,2) * results.sumsquares / results.sample - 3 * pow(results.mean,4));
 
     }
 }

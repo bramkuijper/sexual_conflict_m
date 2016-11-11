@@ -27,16 +27,21 @@
 #include <string>
 #include <cmath>
 #include <cassert>
+#include <gsl/gsl_rng.h>
+#include <gsl/gsl_randist.h>
+#include "bramauxiliary.h"
 
-#include "random.h"
-#include "bram.h"
+
+// random number generator 
+// see http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Generation.html#Random-Number-Generation 
+gsl_rng_type const * T; // gnu scientific library rng type
+gsl_rng *r; // gnu scientific rng 
 
 using namespace std;
 
 const int N = 5000;
 const int N_mate_sample = 10;
 const int clutch_size = 20;
-const int nTraits = 2;
 double a = 1.0; // strength of selection against non-optimal # matings
 double cs = 0.5; // cost of sensitivity
 double ct = 0.5; // cost of     
@@ -71,6 +76,7 @@ unsigned seed = 0;
 int msurvivors = 0;
 int fsurvivors = 0;
 int unmated_f = 0;
+int nmatings_per_female = 0;
 
 int father_eggs[N];
 int mother_eggs[N];
@@ -78,23 +84,17 @@ int mother_eggs[N];
 int mpartners[N];
 int fpartners[N];
 
-Stats stat_start_off[nTraits], stat_start_phen_off[nTraits], stat_ns_off[nTraits];
-Stats stat_start_thr[nTraits], stat_start_phen_thr[nTraits], stat_ns_thr[nTraits];
-Stats stat_start_sen[nTraits], stat_start_phen_sen[nTraits], stat_ns_sen[nTraits];
-JointStats jstat_start_offsen[nTraits], jstat_ns_offsen[nTraits], jstat_ss_offsen[nTraits];
-JointStats jstat_start_offthr[nTraits], jstat_ns_offthr[nTraits], jstat_ss_offthr[nTraits];
-JointStats jstat_start_thrsen[nTraits], jstat_ns_thrsen[nTraits], jstat_ss_thrsen[nTraits];
-
 // the individual struct
 struct Individual
 {
-	double off[nTraits][2]; // male offense trait
-	double thr[nTraits][2]; // female threshold
-	double sen[nTraits][2]; // female sensitivity
+	double off[2]; // male offense trait
+	double thr[2]; // female threshold
+	double sen[2]; // female sensitivity
 
-    double e_off[nTraits];
-    double e_thr[nTraits];
-    double e_sen[nTraits];
+    // TODO
+    double e_off;
+    double e_thr;
+    double e_sen;
 };
 
 typedef Individual Population[N];
@@ -130,17 +130,17 @@ void initArguments(int argc, char *argv[])
 
 void MutateOff(double &G)
 {
-	G += Uniform()<mu_off ? Normal(0,sdmu_off) : 0;
+	G += gsl_rng_uniform(r)<mu_off ? gsl_ran_gaussian(r, sdmu_off) : 0;
 }
 
 void MutateThr(double &G)
 {
-	G+= Uniform()<mu_thr ? Normal(0,sdmu_thr) : 0; 
+	G+= gsl_rng_uniform(r)<mu_thr ? gsl_ran_gaussian(r, sdmu_thr) : 0; 
 }
 
 void MutateSen(double &G)
 {
-	G+= Uniform()<mu_sen ? Normal(0,sdmu_sen) : 0; 
+	G+= gsl_rng_uniform(r)<mu_sen ? gsl_ran_gaussian(r, sdmu_sen) : 0; 
 }
 
 void WriteParameters()
@@ -150,7 +150,6 @@ void WriteParameters()
 		<< "type:;" << "sexual_conflict" << ";" << endl
 		<< "popsize_init:;" << N << ";" << endl
 		<< "n_mate_sample:;" << N_mate_sample << ";"<< endl
-		<< "nTraits:;" << nTraits << ";"<< endl
 		<< "a:;" <<  a << ";"<< endl
 		<< "coff:;" <<  co << ";"<< endl
 		<< "cthr:;" <<  ct << ";"<< endl
@@ -175,31 +174,32 @@ void Init()
 {
 	seed = get_nanoseconds();
 
-	SetSeed(seed);    
+    // set up the random number generators
+    // (from the gnu gsl library)
+    gsl_rng_env_setup();
+    T = gsl_rng_default;
+    r = gsl_rng_alloc(T);
+    gsl_rng_set(r, seed);
     
     for (int i = 0; i < N/2; ++i)
     {
-        for (int j = 0; j < nTraits; ++j)
-        {
-            Females[i].off[j][0] = init_off;
-            Females[i].off[j][1] = init_off;
-            Females[i].sen[j][0] = init_sen;
-            Females[i].sen[j][1] = init_sen;
-            Females[i].thr[j][0] = init_thr;
-            Females[i].thr[j][1] = init_thr;
-            
-            Males[i].off[j][0] = init_off;
-            Males[i].off[j][1] = init_off;
-            Males[i].sen[j][0] = init_sen;
-            Males[i].sen[j][1] = init_sen;
-            Males[i].thr[j][0] = init_thr;
-            Males[i].thr[j][1] = init_thr;
+        Females[i].off[0] = init_off;
+        Females[i].off[1] = init_off;
+        Females[i].sen[0] = init_sen;
+        Females[i].sen[1] = init_sen;
+        Females[i].thr[0] = init_thr;
+        Females[i].thr[1] = init_thr;
         
-            Females[i].e_thr[j] =  init_thr;
-            Females[i].e_sen[j] =  init_sen;
-            Males[i].e_off[j] =  init_off;
-        }
-
+        Males[i].off[0] = init_off;
+        Males[i].off[1] = init_off;
+        Males[i].sen[0] = init_sen;
+        Males[i].sen[1] = init_sen;
+        Males[i].thr[0] = init_thr;
+        Males[i].thr[1] = init_thr;
+    
+        Females[i].e_thr =  init_thr;
+        Females[i].e_sen =  init_sen;
+        Males[i].e_off =  init_off;
     }
 
     Nmales = N/2;
@@ -213,23 +213,23 @@ void Create_Kid(int mother, int father, Individual &kid)
 	assert(mother >= 0 && mother < fsurvivors);
 	assert(father >= 0 && father < msurvivors);
 
-    for (int i = 0; i < nTraits; ++i)
-    {
-        kid.off[i][0] = FemaleSurvivors[mother].off[i][RandomNumber(2)];
-        MutateOff(kid.off[i][0]);
-        kid.off[i][1] = MaleSurvivors[father].off[i][RandomNumber(2)];
-        MutateOff(kid.off[i][1]);
+    // inherit offense trait
+    kid.off = FemaleSurvivors[mother].off[gsl_rng_uniform_int(r, 2)];
+    MutateOff(kid.off);
+    kid.off = MaleSurvivors[father].off[gsl_rng_uniform_int(r, 2)];
+    MutateOff(kid.off);
 
-        kid.thr[i][0] = FemaleSurvivors[mother].thr[i][RandomNumber(2)];
-        MutateThr(kid.thr[i][0]);
-        kid.thr[i][1] = MaleSurvivors[father].thr[i][RandomNumber(2)];
-        MutateThr(kid.thr[i][1]);
+    // inherit threshold
+    kid.thr = FemaleSurvivors[mother].thr[gsl_rng_uniform_int(r, 2)];
+    MutateThr(kid.thr);
+    kid.thr = MaleSurvivors[father].thr[gsl_rng_uniform_int(r, 2)];
+    MutateThr(kid.thr);
 
-        kid.sen[i][0] = FemaleSurvivors[mother].sen[i][RandomNumber(2)];
-        MutateSen(kid.sen[i][0]);
-        kid.sen[i][1] = MaleSurvivors[father].sen[i][RandomNumber(2)];
-        MutateSen(kid.sen[i][1]);
-    }
+    // inherit sensitivity
+    kid.sen = FemaleSurvivors[mother].sen[gsl_rng_uniform_int(r, 2)];
+    MutateSen(kid.sen);
+    kid.sen = MaleSurvivors[father].sen[gsl_rng_uniform_int(r, 2)];
+    MutateSen(kid.sen);
 }
 
 
@@ -241,41 +241,17 @@ void Survive()
     fsurvivors = 0;
     double w = 0;
 
-    if (do_stats)
-    {
-        for (int i = 0; i < nTraits; ++i)
-        {
-            stat_reset(stat_ns_off[i]);
-            stat_reset(stat_ns_thr[i]);
-            stat_reset(stat_ns_sen[i]);
-        }
-    }
-    
+    // let females survive
 	for (int i = 0; i < Nfemales; ++i)
 	{
-        double thr = 0;
-        double sen = 0;
-
-        for (int j = 0; j < nTraits; ++j)
-        {
-            thr += pow(fabs(Females[i].e_thr[j] - thr_opt), 1/ipowthr);
-            sen += pow(fabs(Females[i].e_sen[j] - sen_opt), 1/ipowsen);
-        }
-
-        // we use the same scaling of fitness as Day et al use
+        // we use the same scaling of fitness as Rowe et al 
         // but we use exponents here:
-        w = exp(-ct * pow(thr,ipowthr*gammathr) - cs * pow(sen,ipowsen*gammasen));
+        w = exp(-ct * pow(Females[i].e_thr - thr_opt,2) 
+                    - cs * pow(Females[i].e_sen - sen_opt,2));
 
-        if (Uniform() < w)
+        // female is surviving
+        if (gsl_rng_uniform(r) < w)
         {
-            if (do_stats)
-            {
-                for (int j = 0; j < nTraits; ++j)
-                {
-                    stat_addval(stat_ns_thr[j], Females[i].e_thr[j]);
-                    stat_addval(stat_ns_sen[j], Females[i].e_sen[j]);
-                }
-            }
             FemaleSurvivors[fsurvivors++] = Females[i];
         }
 	}
@@ -285,25 +261,12 @@ void Survive()
 	// now get the male trait values into a viability measure
 	for (int i = 0; i < Nmales; ++i)
 	{
-        double off = 0;
-
-        for (int j = 0; j < nTraits; ++j)
-        {
-            off += pow(Males[i].e_off[j] - off_opt, powoff);
-        }
-
-		w = exp(-co * off);
+        // natural selection on a male offense trait
+		w = exp(-co * pow(Males[i].e_off - off_opt, 2));
         
-        if (Uniform() < w)
+        // survival of males
+        if (gsl_rng_uniform(r) < w)
         {
-            if (do_stats)
-            {
-                for (int j = 0; j < nTraits; ++j)
-                {
-                    stat_addval(stat_ns_off[j], Males[i].e_off[j]);
-                }
-            }
-
             MaleSurvivors[msurvivors++] = Males[i];
         }
 	}
@@ -336,68 +299,54 @@ void Choose(int &mother, int &offspring)
 	for (int i = 0; i < encounters; ++i)
 	{
 		// get a random male survivor
-		int random_mate = RandomNumber(msurvivors);
+		int random_mate = gsl_rng_uniform_int(r, msurvivors);
         
-        double signal = 0;
+        // calculate the mating rate
+        // see p. 57 2nd column in Rowe et al
+        double signal = FemaleSurvivors[mother].e_sen * (
+                        MaleSurvivors[random_mate].e_off 
+                        - FemaleSurvivors[mother].e_thr
+                        );
 
-        // go through the number of traits and calculate the mating rate
-        for (int j = 0; j < nTraits; ++j)
-        {
-            signal += FemaleSurvivors[mother].e_sen[j] * (MaleSurvivors[random_mate].e_off[j] - FemaleSurvivors[mother].e_thr[j]);
-        }
-
-        double psi = 1 / (1 + ((1/theta_psi) - 1) * exp(-signal)); // no signal: psi = 0.5
+//        double psi = 1.0 / (1.0 + exp(-signal)); // no signal: psi = 0.5
+//
+//      In Rowe's model theta_psi is always .5. Here I account for the fact
+//      that other optima may be possible as well.
+        double psi = 1.0 / (1.0 + ((1.0/theta_psi) - 1.0) * exp(-signal)); // no signal: psi = 0.5
 
         // will this male mate with this female?
-        if (Uniform() < psi)
+        if (gsl_rng_uniform(r) < psi)
         {
             mates[nMatings++]=random_mate;
-            
-            if (do_stats)
-            {
-                ++mpartners[random_mate];
-            }
         }
-
 	}
-
-    if (do_stats)
-    {
-        fpartners[mother] += nMatings;
-    }
 
     // the more the total number of matings diverges from the optimum, the lower
     // the fecundity
-    double fecundity_part = (double) clutch_size * exp(-a * pow((double) nMatings / encounters - theta_psi, 2.0));
+    double fecundity_continuous = (double) clutch_size * exp(-a * pow((double) nMatings / encounters - theta_psi, 2.0));
 
-    int fecundity = floor(fecundity_part);
+    int fecundity = floor(fecundity_continuous);
 
-    double delta_round = fecundity_part - fecundity;
+    // rounding of a continuous fecundity number to a discrete one
+    double delta_round = fecundity_continuous - fecundity;
 
-    if (Uniform() < delta_round)
+    if (gsl_rng_uniform(r) < delta_round)
     {
         ++fecundity;
     }
 
     assert(fecundity <= clutch_size);
 
-
-    // do some fecundity rounding here...
-
+    // ok, now make offspring where paternity is 
+    // randomly distributed over mates
     if (nMatings > 0)
     {
         for (int i = 0; i < fecundity; ++i)
         {
 
-            int randnum = RandomNumber(nMatings);
+            int randnum = gsl_rng_uniform_int(r, nMatings);
             int current_father = mates[randnum];
 
-            if (do_stats)
-            {
-                ++father_eggs[current_father];
-                ++mother_eggs[mother];
-            }
-            
             Individual Kid;
             Create_Kid(mother, current_father, Kid);
             NewPop[offspring++] = Kid;
