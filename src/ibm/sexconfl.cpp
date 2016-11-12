@@ -214,22 +214,22 @@ void Create_Kid(int mother, int father, Individual &kid)
 	assert(father >= 0 && father < msurvivors);
 
     // inherit offense trait
-    kid.off = FemaleSurvivors[mother].off[gsl_rng_uniform_int(r, 2)];
-    MutateOff(kid.off);
-    kid.off = MaleSurvivors[father].off[gsl_rng_uniform_int(r, 2)];
-    MutateOff(kid.off);
+    kid.off[0] = FemaleSurvivors[mother].off[gsl_rng_uniform_int(r, 2)];
+    MutateOff(kid.off[0]);
+    kid.off[1] = MaleSurvivors[father].off[gsl_rng_uniform_int(r, 2)];
+    MutateOff(kid.off[1]);
 
     // inherit threshold
-    kid.thr = FemaleSurvivors[mother].thr[gsl_rng_uniform_int(r, 2)];
-    MutateThr(kid.thr);
-    kid.thr = MaleSurvivors[father].thr[gsl_rng_uniform_int(r, 2)];
-    MutateThr(kid.thr);
+    kid.thr[0] = FemaleSurvivors[mother].thr[gsl_rng_uniform_int(r, 2)];
+    MutateThr(kid.thr[0]);
+    kid.thr[1] = MaleSurvivors[father].thr[gsl_rng_uniform_int(r, 2)];
+    MutateThr(kid.thr[1]);
 
     // inherit sensitivity
-    kid.sen = FemaleSurvivors[mother].sen[gsl_rng_uniform_int(r, 2)];
-    MutateSen(kid.sen);
-    kid.sen = MaleSurvivors[father].sen[gsl_rng_uniform_int(r, 2)];
-    MutateSen(kid.sen);
+    kid.sen[0] = FemaleSurvivors[mother].sen[gsl_rng_uniform_int(r, 2)];
+    MutateSen(kid.sen[0]);
+    kid.sen[1] = MaleSurvivors[father].sen[gsl_rng_uniform_int(r, 2)];
+    MutateSen(kid.sen[1]);
 }
 
 
@@ -343,7 +343,6 @@ void Choose(int &mother, int &offspring)
     {
         for (int i = 0; i < fecundity; ++i)
         {
-
             int randnum = gsl_rng_uniform_int(r, nMatings);
             int current_father = mates[randnum];
 
@@ -364,24 +363,9 @@ void Choose(int &mother, int &offspring)
 void NextGen()
 {
     int offspring = 0;
-    
-    if (do_stats)
-    {
-        for (int i = 0; i < msurvivors; ++i)
-        {
-            father_eggs[i] = 0;
-            mpartners[i] = 0;
-        }
-        
-        for (int i = 0; i < fsurvivors; ++i)
-        {
-            mother_eggs[i] = 0;
-            fpartners[i] = 0;
-        }
-        
-        unmated_f = 0;
-    }
 
+    unmated_f = 0;
+    
     // let the surviving females choose a mate
 	for (int i = 0; i < fsurvivors; ++i)
 	{
@@ -394,7 +378,6 @@ void NextGen()
         exit(1);
     }
 
-
     assert(offspring > 0 && offspring < popsize*clutch_size);
 
     int sons = 0;
@@ -402,30 +385,31 @@ void NextGen()
 
     popsize = offspring < N ? offspring : N;
 
+    // replace population with offspring
     for (int i = 0; i < popsize; ++i)
     {
-        if (Uniform() < 0.5)
+        if (gsl_rng_uniform(r) < 0.5)
         {
-            Males[sons] = NewPop[RandomNumber(offspring)];
+            Males[sons] = NewPop[gsl_rng_uniform_int(r, offspring)];
    
-            for (int j = 0; j < nTraits; ++j)
-            {
-                double off = 0.5 * ( Males[sons].off[j][0] + Males[sons].off[j][1]);
-                Males[sons].e_off[j] = off; 
-            }
+            double off = 0.5 * ( Males[sons].off[0] + Males[sons].off[1]);
+            Males[sons].e_off = off; 
             ++sons;
         }
         else
         {
-            Females[daughters] = NewPop[RandomNumber(offspring)];
+            Females[daughters] = NewPop[gsl_rng_uniform_int(r, offspring)];
             
-            for (int j = 0; j < nTraits; ++j)
-            {
-                double thr = 0.5 * ( Females[daughters].thr[j][0] + Females[daughters].thr[j][1]);
-                Females[daughters].e_thr[j] = thr;
-                double sen = 0.5 * ( Females[daughters].sen[j][0] + Females[daughters].sen[j][1]);
-                Females[daughters].e_sen[j] = sen;
-            }
+            double thr = 0.5 * (Females[daughters].thr[0] + 
+                    Females[daughters].thr[1]);
+
+            Females[daughters].e_thr = thr;
+
+            double sen = 0.5 * (Females[daughters].sen[0] + 
+                    Females[daughters].sen[1]);
+
+            Females[daughters].e_sen = sen;
+
             ++daughters;
         }
     }
@@ -442,261 +426,67 @@ void WriteData()
 		exit(1);
 	}
 
-    for (int i = 0; i < nTraits; ++i)
-    {
-        stat_reset(stat_start_phen_off[i]);
-        stat_reset(stat_start_phen_thr[i]);
-        stat_reset(stat_start_phen_sen[i]);
-        stat_reset(stat_start_off[i]);
-        stat_reset(stat_start_thr[i]);
-        stat_reset(stat_start_sen[i]);
-        jstat_reset(jstat_start_offsen[i]);
-        jstat_reset(jstat_start_offthr[i]);
-        jstat_reset(jstat_start_thrsen[i]);
-    }
+    double off, sen, thr;
 
-    int sumfrs = 0; 
-    int summrs = 0; 
-    int ssfrs = 0; 
-    int ssmrs = 0; 
-
-    double meanmrs, meanfrs, varfrs, varmrs;
-
-    double f_matings = 0;
-    double ss_f_matings = 0;
-    double m_matings = 0;
-    double ss_m_matings = 0;
+    double meanoff = 0;
+    double meansen = 0;
+    double meanthr = 0;
+    double ssoff = 0;
+    double sssen = 0;
+    double ssthr = 0;
 
 	for (int i = 0; i < Nmales; ++i)
 	{
-        double off, sen, thr;
+        off = 0.5 * ( Males[i].off[0] + Males[i].off[1]);
+        sen = 0.5 * ( Males[i].sen[0] + Males[i].sen[1]);
+        thr = 0.5 * ( Males[i].thr[0] + Males[i].thr[1]);
 
-        for (int j = 0; j < nTraits; ++j)
-        {
-            off = 0.5 * ( Males[i].off[j][0] + Males[i].off[j][1]);
-            sen = 0.5 * ( Males[i].sen[j][0] + Males[i].sen[j][1]);
-            thr = 0.5 * ( Males[i].thr[j][0] + Males[i].thr[j][1]);
-
-#ifdef DISTRIBUTION 
-            distfile << generation << ";"
-                    << setprecision(5) << off << ";"
-                    << setprecision(5) << sen << ";"
-                    << setprecision(5) << 0 << ";" 
-                    << setprecision(5) << thr << ";" << endl;
-#endif // DISTRIBUTION
-
-            stat_addval(stat_start_off[j], off);
-            stat_addval(stat_start_thr[j], thr);
-            stat_addval(stat_start_sen[j], sen);
-            stat_addval(stat_start_phen_off[j], Males[i].e_off[j]);
-            jstat_addval(jstat_start_offsen[j], off, sen); 
-            jstat_addval(jstat_start_offthr[j], off, thr); 
-            jstat_addval(jstat_start_thrsen[j], sen, thr); 
-        }
-            
-        if (i < msurvivors)
-        {
-            summrs += father_eggs[i];
-            ssmrs += father_eggs[i] * father_eggs[i];
-
-            m_matings += mpartners[i];
-            ss_m_matings += mpartners[i] * mpartners[i];
-
-        }
+        meanoff += off;
+        meansen += sen;
+        meanthr += thr;
+        
+        ssoff += off*off;
+        sssen += sen*sen;
+        ssthr += thr*thr;
 	}
 
 	for (int i = 0; i < Nfemales; ++i)
 	{
-        double off, sen, thr;
-
-        for (int j = 0; j < nTraits; ++j)
-        {
-            off = 0.5 * ( Females[i].off[j][0] + Females[i].off[j][1]);
-            sen = 0.5 * ( Females[i].sen[j][0] + Females[i].sen[j][1]);
-            thr = 0.5 * ( Females[i].thr[j][0] + Females[i].thr[j][1]);
-
-
-#ifdef DISTRIBUTION 
-            distfile << generation << ";"
-                    << setprecision(5) << off << ";"
-                    << setprecision(5) << sen << ";"
-                    << setprecision(5) << 0 << ";" 
-                    << setprecision(5) << thr << ";" << endl;
-#endif // DISTRIBUTION
-            
-            stat_addval(stat_start_phen_thr[j], Females[i].e_thr[j]);
-            stat_addval(stat_start_phen_sen[j], Females[i].e_sen[j]);
-            stat_addval(stat_start_off[j], off);
-            stat_addval(stat_start_thr[j], thr);
-            stat_addval(stat_start_sen[j], sen);
-            jstat_addval(jstat_start_offsen[j], off, sen); 
-            jstat_addval(jstat_start_offthr[j], off, thr); 
-            jstat_addval(jstat_start_thrsen[j], sen, thr); 
-        }
-
-        if (i < fsurvivors)
-        {
-            sumfrs += mother_eggs[i];
-            ssfrs += mother_eggs[i] * mother_eggs[i];
-            f_matings += fpartners[i];
-            ss_f_matings += fpartners[i] * fpartners[i];
-        }
+        off = 0.5 * ( Females[i].off[0] + Females[i].off[1]);
+        sen = 0.5 * ( Females[i].sen[0] + Females[i].sen[1]);
+        thr = 0.5 * ( Females[i].thr[0] + Females[i].thr[1]);
+        
+        meanoff += off;
+        meansen += sen;
+        meanthr += thr;
+        
+        ssoff += off*off;
+        sssen += sen*sen;
+        ssthr += thr*thr;
 	}
 
-    for (int i = 0; i < nTraits; ++i)
-    {
-        stat_finalize(stat_start_phen_thr[i]);
-        stat_finalize(stat_start_thr[i]);
-        stat_finalize(stat_ns_thr[i]);
-
-        stat_finalize(stat_start_phen_sen[i]);
-        stat_finalize(stat_start_sen[i]);
-        stat_finalize(stat_ns_sen[i]);
-        
-        stat_finalize(stat_start_phen_off[i]);
-        stat_finalize(stat_start_off[i]);
-        stat_finalize(stat_ns_off[i]);
-
-        jstat_finalize(jstat_start_offsen[i], stat_start_off[i].mean, stat_start_sen[i].mean);
-        jstat_finalize(jstat_start_offthr[i], stat_start_off[i].mean, stat_start_thr[i].mean);
-        jstat_finalize(jstat_start_thrsen[i], stat_start_sen[i].mean, stat_start_thr[i].mean);
-    }
-    
     double sum_sexes = Nmales + Nfemales;
 
-    meanfrs = (double) sumfrs / Nfemales;
-    meanmrs = (double) summrs / Nmales;
-    varfrs = (double) ssfrs / Nfemales - meanfrs * meanfrs;
-    varmrs = (double) ssmrs / Nmales - meanmrs * meanmrs;
+	DataFile << generation << ";"
+            << meanoff / sum_sexes << ";" 
+            << meansen / sum_sexes << ";" 
+            << meanthr / sum_sexes << ";" 
+            << ssoff / sum_sexes - meanoff * meanoff << ";" 
+            << sssen / sum_sexes  - meansen * meansen << ";" 
+            << ssthr / sum_sexes - meanthr * meanthr << ";" 
+            << Nmales << ";"
+            << Nfemales << ";"
+            << msurvivors << ";"
+            << fsurvivors << ";"
+            << unmated_f << ";"
+            << endl;
 
-    m_matings /= (double) msurvivors;
-    f_matings /= (double) fsurvivors;
-
-    double var_m_matings = ss_m_matings / msurvivors - m_matings * m_matings;
-    double var_f_matings = ss_f_matings / fsurvivors - f_matings * f_matings;
-
-	DataFile << generation;
-
-    for (int i = 0; i < nTraits; ++i)
-    {
-		DataFile << ";" << setprecision(5) << stat_start_off[i].mean
-		<< ";" << setprecision(5) << stat_start_thr[i].mean
-		<< ";" << setprecision(5) << stat_start_sen[i].mean
-		
-		<< ";" << setprecision(5) << stat_start_off[i].mean_ci
-		<< ";" << setprecision(5) << stat_start_thr[i].mean_ci
-		<< ";" << setprecision(5) << stat_start_sen[i].mean_ci
-
-		<< ";" << setprecision(5) << stat_start_phen_off[i].mean
-		<< ";" << setprecision(5) << stat_start_phen_thr[i].mean
-		<< ";" << setprecision(5) << stat_start_phen_sen[i].mean
-		
-		<< ";" << setprecision(5) << stat_ns_off[i].mean
-		<< ";" << setprecision(5) << stat_ns_thr[i].mean
-		<< ";" << setprecision(5) << stat_ns_sen[i].mean
-		
-        << ";" << setprecision(5) << stat_ns_off[i].mean_ci
-		<< ";" << setprecision(5) << stat_ns_thr[i].mean_ci
-		<< ";" << setprecision(5) << stat_ns_sen[i].mean_ci
-
-		<< ";" << setprecision(5) << stat_start_off[i].var
-		<< ";" << setprecision(5) << stat_start_thr[i].var
-		<< ";" << setprecision(5) << stat_start_sen[i].var
-		
-        << ";" << setprecision(5) << stat_start_phen_off[i].var
-		<< ";" << setprecision(5) << stat_start_phen_thr[i].var
-		<< ";" << setprecision(5) << stat_start_phen_sen[i].var
-
-		<< ";" << setprecision(5) << stat_ns_off[i].var
-		<< ";" << setprecision(5) << stat_ns_thr[i].var
-		<< ";" << setprecision(5) << stat_ns_sen[i].var
-
-		<< ";" << setprecision(5) << jstat_start_offsen[i].cov 
-		<< ";" << setprecision(5) << (jstat_start_offsen[i].cov == 0 ? 0 : jstat_start_offsen[i].cov / (sqrt(stat_start_off[i].var) * sqrt(stat_start_sen[i].var)))
-
-		<< ";" << setprecision(5) << jstat_start_offthr[i].cov 
-		<< ";" << setprecision(5) << (jstat_start_offthr[i].cov == 0 ? 0 : jstat_start_offthr[i].cov / (sqrt(stat_start_off[i].var) * sqrt(stat_start_thr[i].var)))
-		
-        << ";" << setprecision(5) << jstat_start_thrsen[i].cov 
-		<< ";" << setprecision(5) << (jstat_start_thrsen[i].cov == 0 ? 0 : jstat_start_thrsen[i].cov / (sqrt(stat_start_sen[i].var) * sqrt(stat_start_thr[i].var)));
-    }
-
-        DataFile << ";" << msurvivors
-        << ";" << fsurvivors
-		<< ";" << sum_sexes
-        << ";" << setprecision(5) << m_matings 
-        << ";" << setprecision(5) <<  var_m_matings
-        << ";" << setprecision(5) <<  f_matings
-        << ";" << setprecision(5) <<  var_f_matings
-        << ";" << setprecision(5) << unmated_f 
-        << ";" << setprecision(5) << meanfrs 
-        << ";" << setprecision(5) << meanmrs 
-        << ";" << setprecision(5) << varfrs 
-        << ";" << setprecision(5) << varmrs 
-        << ";" << endl;
 }
 
 void WriteDataHeaders()
 {
-	DataFile << "generation";
+	DataFile << "generation;meanoff;meansen;meanthr;varoff;varsen;varthr;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;";
 
-    for (int i = 1; i <= nTraits; ++i)
-    {
-		DataFile << ";mean_off" << i 
-		<< ";mean_thr" << i
-		<< ";mean_sen" << i
-
-        << ";ci_off"<< i
-        << ";ci_thr"<< i
-        << ";ci_sen"<< i
-
-		<< ";mean_phen_off" << i
-		<< ";mean_phen_thr" << i
-		<< ";mean_phen_sen" << i
-
-		<< ";mean_ns_off" << i
-		<< ";mean_ns_thr" << i
-		<< ";mean_ns_sen"<< i
-		
-        << ";mean_ns_off_ci" << i
-		<< ";mean_ns_thr_ci" << i
-		<< ";mean_ns_sen_ci"<< i
-
-		<< ";var_off" << i
-		<< ";var_thr" << i
-		<< ";var_sen" << i
-
-		<< ";var_phen_off" << i
-		<< ";var_phen_thr" << i
-		<< ";var_phen_sen" << i
-
-		<< ";var_ns_off" << i
-		<< ";var_ns_thr" << i
-		<< ";var_ns_sen" << i
-
-		<< ";cov_offsen" << i
-		<< ";corr_offsen" << i
-		
-        << ";cov_offthr" << i
-		<< ";corr_offthr" << i
-
-        << ";cov_thrsen" << i
-		<< ";corr_thrsen" << i;
-    }
-
-    DataFile << ";surviving_males"
-        << ";surviving_females"
-		<< ";N"
-        << ";mean_matings_per_male"
-        << ";var_matings_per_male"
-        << ";mean_matings_per_female"
-        << ";var_matings_per_female"
-        << ";unmated_f"
-        << ";meanfrs"
-        << ";meanmrs"
-        << ";varfrs"
-        << ";varmrs;"
-		<< endl;
 }
 
 int main(int argc, char ** argv)
