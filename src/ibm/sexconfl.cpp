@@ -52,8 +52,6 @@ double const off_opt = 2;
 double const init_sen = sen_opt; // traits start at their optima
 double const init_off = off_opt; 
 double const init_thr = thr_opt; 
-double ipowthr = 0.1;
-double ipowsen = 0.1;
 double gammathr = 2;
 double gammasen = 2;
 double const powoff = 2;
@@ -124,8 +122,6 @@ void initArguments(int argc, char *argv[])
 	sdmu_thr = atof(argv[9]);
 	sdmu_sen = atof(argv[10]);
     theta_psi = atof(argv[11]);
-    ipowthr = atof(argv[12]);
-    ipowsen = atof(argv[13]);
 }
 
 void MutateOff(double &G)
@@ -157,8 +153,6 @@ void WriteParameters()
 		<< "thr_opt:;" <<  thr_opt << ";"<< endl
 		<< "sen_opt:;" <<  sen_opt << ";"<< endl
 		<< "off_opt:;" <<  off_opt << ";"<< endl
-		<< "powthr:;" <<  ipowthr << ";"<< endl
-		<< "powsen:;" <<  ipowsen << ";"<< endl
 		<< "theta_psi:;" << theta_psi << ";"<< endl
 		<< "mu_off:;" <<  mu_off << ";"<< endl
 		<< "mu_thr:;" <<  mu_thr << ";"<< endl
@@ -323,7 +317,8 @@ void Choose(int &mother, int &offspring)
 
     // the more the total number of matings diverges from the optimum, the lower
     // the fecundity
-    double fecundity_continuous = (double) clutch_size * exp(-a * pow((double) nMatings / encounters - theta_psi, 2.0));
+    double fecundity_continuous = (double) clutch_size * 
+        exp(-a * pow((double) nMatings / encounters - theta_psi, 2.0));
 
     int fecundity = floor(fecundity_continuous);
 
@@ -467,10 +462,14 @@ void WriteData()
 
     double sum_sexes = Nmales + Nfemales;
 
+    meanoff /= sum_sexes;
+    meansen /= sum_sexes;
+    meanthr /= sum_sexes;
+
 	DataFile << generation << ";"
-            << meanoff / sum_sexes << ";" 
-            << meansen / sum_sexes << ";" 
-            << meanthr / sum_sexes << ";" 
+            << meanoff << ";" 
+            << meansen << ";" 
+            << meanthr << ";" 
             << ssoff / sum_sexes - meanoff * meanoff << ";" 
             << sssen / sum_sexes  - meansen * meansen << ";" 
             << ssthr / sum_sexes - meanthr * meanthr << ";" 
@@ -485,7 +484,7 @@ void WriteData()
 
 void WriteDataHeaders()
 {
-	DataFile << "generation;meanoff;meansen;meanthr;varoff;varsen;varthr;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;";
+	DataFile << "generation;meanoff;meansen;meanthr;varoff;varsen;varthr;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;" << endl;;
 
 }
 
