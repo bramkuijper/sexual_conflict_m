@@ -56,11 +56,17 @@ double gammathr = 2;
 double gammasen = 2;
 double const powoff = 2;
 double mu_off 	  = 0.05;            // mutation rate
+double mu_off_p     = 0.05;            // mutation rate
 double mu_thr 	  = 0.05;            // mutation rate
+double mu_thr_m     = 0.05;            // mutation rate
 double mu_sen     = 0.05;            // mutation rate
+double mu_sen_m     = 0.05;            // mutation rate
 double sdmu_off         = 0.4;			 // standard deviation mutation size
+double sdmu_off_p         = 0.4;			 // standard deviation mutation size
 double sdmu_thr         = 0.4;			 // standard deviation mutation size
+double sdmu_thr_m         = 0.4;			 // standard deviation mutation size
 double sdmu_sen         = 0.4;			 // standard deviation mutation size
+double sdmu_sen_m         = 0.4;			 // standard deviation mutation size
 const double NumGen = 50000;
 const int skip = 10;
 double theta_psi = 1;
@@ -88,8 +94,11 @@ struct Individual
 	double off[2]; // male offense trait
 	double thr[2]; // female threshold
 	double sen[2]; // female sensitivity
+	
+    double off_p[2]; // male offense trait paternal effect
+	double thr_m[2]; // female threshold maternal effect
+	double sen_m[2]; // female sensitivity maternal effect
 
-    // TODO
     double e_off;
     double e_thr;
     double e_sen;
@@ -118,49 +127,52 @@ void initArguments(int argc, char *argv[])
 	mu_off = atof(argv[5]);
 	mu_thr = atof(argv[6]);
 	mu_sen = atof(argv[7]);
-	sdmu_off = atof(argv[8]);
-	sdmu_thr = atof(argv[9]);
-	sdmu_sen = atof(argv[10]);
-    theta_psi = atof(argv[11]);
+	mu_off_p = atof(argv[8]);
+	mu_thr_m = atof(argv[9]);
+	mu_sen_m = atof(argv[10]);
+	sdmu_off = atof(argv[11]);
+	sdmu_thr = atof(argv[12]);
+	sdmu_sen = atof(argv[13]);
+	sdmu_off_p = atof(argv[14]);
+	sdmu_thr_m = atof(argv[15]);
+	sdmu_sen_m = atof(argv[16]);
+    theta_psi = atof(argv[17]);
 }
 
-void MutateOff(double &G)
+void Mutate(double &G, double const mu, double const sdmu)
 {
-	G += gsl_rng_uniform(r)<mu_off ? gsl_ran_gaussian(r, sdmu_off) : 0;
+	G += gsl_rng_uniform(r)<mu ? gsl_ran_gaussian(r, sdmu) : 0;
 }
 
-void MutateThr(double &G)
-{
-	G+= gsl_rng_uniform(r)<mu_thr ? gsl_ran_gaussian(r, sdmu_thr) : 0; 
-}
-
-void MutateSen(double &G)
-{
-	G+= gsl_rng_uniform(r)<mu_sen ? gsl_ran_gaussian(r, sdmu_sen) : 0; 
-}
 
 void WriteParameters()
 {
 	DataFile << endl
 		<< endl
-		<< "type:;" << "sexual_conflict" << ";" << endl
-		<< "popsize_init:;" << N << ";" << endl
-		<< "n_mate_sample:;" << N_mate_sample << ";"<< endl
-		<< "a:;" <<  a << ";"<< endl
-		<< "coff:;" <<  co << ";"<< endl
-		<< "cthr:;" <<  ct << ";"<< endl
-		<< "csen:;" <<  cs << ";"<< endl
-		<< "thr_opt:;" <<  thr_opt << ";"<< endl
-		<< "sen_opt:;" <<  sen_opt << ";"<< endl
-		<< "off_opt:;" <<  off_opt << ";"<< endl
-		<< "theta_psi:;" << theta_psi << ";"<< endl
-		<< "mu_off:;" <<  mu_off << ";"<< endl
-		<< "mu_thr:;" <<  mu_thr << ";"<< endl
-		<< "mu_sen:;" <<  mu_sen << ";"<< endl
-		<< "mu_std_off:;" <<  sdmu_off << ";"<< endl
-		<< "mu_std_thr:;" <<  sdmu_thr << ";"<< endl
-		<< "mu_std_sen:;" <<  sdmu_sen << ";"<< endl
-		<< "seed:;" << seed << ";"<< endl;
+		<< "type;" << "sexual_conflict" << ";" << endl
+		<< "popsize_init;" << N << ";" << endl
+		<< "n_mate_sample;" << N_mate_sample << ";"<< endl
+		<< "a;" <<  a << ";"<< endl
+		<< "coff;" <<  co << ";"<< endl
+		<< "cthr;" <<  ct << ";"<< endl
+		<< "csen;" <<  cs << ";"<< endl
+		<< "thr_opt;" <<  thr_opt << ";"<< endl
+		<< "sen_opt;" <<  sen_opt << ";"<< endl
+		<< "off_opt;" <<  off_opt << ";"<< endl
+		<< "theta_psi;" << theta_psi << ";"<< endl
+		<< "mu_off;" <<  mu_off << ";"<< endl
+		<< "mu_thr;" <<  mu_thr << ";"<< endl
+		<< "mu_sen;" <<  mu_sen << ";"<< endl
+		<< "mu_off_p;" <<  mu_off_p << ";"<< endl
+		<< "mu_thr_m;" <<  mu_thr_m << ";"<< endl
+		<< "mu_sen_m;" <<  mu_sen_m << ";"<< endl
+		<< "mu_std_off;" <<  sdmu_off << ";"<< endl
+		<< "mu_std_thr;" <<  sdmu_thr << ";"<< endl
+		<< "mu_std_sen;" <<  sdmu_sen << ";"<< endl
+		<< "mu_std_off_p;" <<  sdmu_off_p << ";"<< endl
+		<< "mu_std_thr_m;" <<  sdmu_thr_m << ";"<< endl
+		<< "mu_std_sen_m;" <<  sdmu_sen_m << ";"<< endl
+		<< "seed;" << seed << ";"<< endl;
 }
 
 // initialize all the phenotypes
@@ -209,21 +221,49 @@ void Create_Kid(int mother, int father, Individual &kid)
 
     // inherit offense trait
     kid.off[0] = FemaleSurvivors[mother].off[gsl_rng_uniform_int(r, 2)];
-    MutateOff(kid.off[0]);
+    Mutate(kid.off[0], mu_off, sdmu_off);
     kid.off[1] = MaleSurvivors[father].off[gsl_rng_uniform_int(r, 2)];
-    MutateOff(kid.off[1]);
+    Mutate(kid.off[1], mu_off, sdmu_off);
+    
+    // inherit offense trait paternal effect genes
+    kid.off_p[0] = FemaleSurvivors[mother].off_p[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.off_p[0], mu_off_p, sdmu_off_p);
+    kid.off_p[1] = MaleSurvivors[father].off_p[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.off_p[1], mu_off_p, sdmu_off_p);
 
     // inherit threshold
     kid.thr[0] = FemaleSurvivors[mother].thr[gsl_rng_uniform_int(r, 2)];
-    MutateThr(kid.thr[0]);
+    Mutate(kid.thr[0], mu_thr, sdmu_thr);
     kid.thr[1] = MaleSurvivors[father].thr[gsl_rng_uniform_int(r, 2)];
-    MutateThr(kid.thr[1]);
+    Mutate(kid.thr[1], mu_thr, sdmu_thr);
+    
+    // inherit threshold maternal effect genes
+    kid.thr_m[0] = FemaleSurvivors[mother].thr_m[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.thr_m[0], mu_thr_m, sdmu_thr_m);
+    kid.thr_m[1] = MaleSurvivors[father].thr_m[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.thr_m[1], mu_thr_m, sdmu_thr_m);
 
     // inherit sensitivity
     kid.sen[0] = FemaleSurvivors[mother].sen[gsl_rng_uniform_int(r, 2)];
-    MutateSen(kid.sen[0]);
+    Mutate(kid.sen[0], mu_sen, sdmu_sen);
     kid.sen[1] = MaleSurvivors[father].sen[gsl_rng_uniform_int(r, 2)];
-    MutateSen(kid.sen[1]);
+    Mutate(kid.sen[1], mu_sen, sdmu_sen);
+
+    // inherit sen_msitivity maternal effect genes
+    kid.sen_m[0] = FemaleSurvivors[mother].sen_m[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.sen_m[0], mu_sen_m, sdmu_sen_m);
+    kid.sen_m[1] = MaleSurvivors[father].sen_m[gsl_rng_uniform_int(r, 2)];
+    Mutate(kid.sen_m[1], mu_sen_m, sdmu_sen_m);
+
+    // express phenotypes
+    kid.e_off = 0.5 * (kid.off[0] + kid.off[1]) 
+        + 0.5 * (kid.off_p[0] + kid.off_p[1]) * MaleSurvivors[father].e_off;
+    
+    kid.e_thr = 0.5 * (kid.thr[0] + kid.thr[1]) 
+        + 0.5 * (kid.thr_m[0] + kid.thr_m[1]) * FemaleSurvivors[mother].e_thr;
+    
+    kid.e_sen = 0.5 * (kid.sen[0] + kid.sen[1]) 
+        + 0.5 * (kid.sen_m[0] + kid.sen_m[1]) * FemaleSurvivors[mother].e_sen;
 }
 
 
@@ -385,27 +425,11 @@ void NextGen()
     {
         if (gsl_rng_uniform(r) < 0.5)
         {
-            Males[sons] = NewPop[gsl_rng_uniform_int(r, offspring)];
-   
-            double off = 0.5 * ( Males[sons].off[0] + Males[sons].off[1]);
-            Males[sons].e_off = off; 
-            ++sons;
+            Males[sons++] = NewPop[gsl_rng_uniform_int(r, offspring)];
         }
         else
         {
-            Females[daughters] = NewPop[gsl_rng_uniform_int(r, offspring)];
-            
-            double thr = 0.5 * (Females[daughters].thr[0] + 
-                    Females[daughters].thr[1]);
-
-            Females[daughters].e_thr = thr;
-
-            double sen = 0.5 * (Females[daughters].sen[0] + 
-                    Females[daughters].sen[1]);
-
-            Females[daughters].e_sen = sen;
-
-            ++daughters;
+            Females[daughters++] = NewPop[gsl_rng_uniform_int(r, offspring)];
         }
     }
 
@@ -421,7 +445,7 @@ void WriteData()
 		exit(1);
 	}
 
-    double off, sen, thr;
+    double off, sen, thr, off_p, sen_m, thr_m;
 
     double meanoff = 0;
     double meansen = 0;
@@ -429,20 +453,38 @@ void WriteData()
     double ssoff = 0;
     double sssen = 0;
     double ssthr = 0;
+    double meanoff_p = 0;
+    double meansen_m = 0;
+    double meanthr_m = 0;
+    double ssoff_p = 0;
+    double sssen_m = 0;
+    double ssthr_m = 0;
 
 	for (int i = 0; i < Nmales; ++i)
 	{
         off = 0.5 * ( Males[i].off[0] + Males[i].off[1]);
         sen = 0.5 * ( Males[i].sen[0] + Males[i].sen[1]);
         thr = 0.5 * ( Males[i].thr[0] + Males[i].thr[1]);
+        
+        off_p = 0.5 * ( Males[i].off_p[0] + Males[i].off_p[1]);
+        sen_m = 0.5 * ( Males[i].sen_m[0] + Males[i].sen_m[1]);
+        thr_m = 0.5 * ( Males[i].thr_m[0] + Males[i].thr_m[1]);
 
         meanoff += off;
         meansen += sen;
         meanthr += thr;
         
+        meanoff_p += off_p;
+        meansen_m += sen_m;
+        meanthr_m += thr_m;
+        
         ssoff += off*off;
         sssen += sen*sen;
         ssthr += thr*thr;
+        
+        ssoff_p += off_p*off_p;
+        sssen_m += sen_m*sen_m;
+        ssthr_m += thr_m*thr_m;
 	}
 
 	for (int i = 0; i < Nfemales; ++i)
@@ -451,13 +493,25 @@ void WriteData()
         sen = 0.5 * ( Females[i].sen[0] + Females[i].sen[1]);
         thr = 0.5 * ( Females[i].thr[0] + Females[i].thr[1]);
         
+        off_p = 0.5 * ( Females[i].off_p[0] + Females[i].off_p[1]);
+        sen_m = 0.5 * ( Females[i].sen_m[0] + Females[i].sen_m[1]);
+        thr_m = 0.5 * ( Females[i].thr_m[0] + Females[i].thr_m[1]);
+
         meanoff += off;
         meansen += sen;
         meanthr += thr;
         
+        meanoff_p += off_p;
+        meansen_m += sen_m;
+        meanthr_m += thr_m;
+        
         ssoff += off*off;
         sssen += sen*sen;
         ssthr += thr*thr;
+        
+        ssoff_p += off_p*off_p;
+        sssen_m += sen_m*sen_m;
+        ssthr_m += thr_m*thr_m;
 	}
 
     double sum_sexes = Nmales + Nfemales;
@@ -465,14 +519,23 @@ void WriteData()
     meanoff /= sum_sexes;
     meansen /= sum_sexes;
     meanthr /= sum_sexes;
+    meanoff_p /= sum_sexes;
+    meansen_m /= sum_sexes;
+    meanthr_m /= sum_sexes;
 
 	DataFile << generation << ";"
             << meanoff << ";" 
             << meansen << ";" 
             << meanthr << ";" 
+            << meanoff_p << ";" 
+            << meansen_m << ";" 
+            << meanthr_m << ";" 
             << ssoff / sum_sexes - meanoff * meanoff << ";" 
             << sssen / sum_sexes  - meansen * meansen << ";" 
             << ssthr / sum_sexes - meanthr * meanthr << ";" 
+            << ssoff_p / sum_sexes - meanoff_p * meanoff_p << ";" 
+            << sssen_m / sum_sexes  - meansen_m * meansen_m << ";" 
+            << ssthr_m / sum_sexes - meanthr_m * meanthr_m << ";" 
             << Nmales << ";"
             << Nfemales << ";"
             << msurvivors << ";"
@@ -484,7 +547,7 @@ void WriteData()
 
 void WriteDataHeaders()
 {
-	DataFile << "generation;meanoff;meansen;meanthr;varoff;varsen;varthr;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;" << endl;;
+	DataFile << "generation;meanoff;meansen;meanthr;meanoff_p;meansen_m;meanthr_m;varoff;varsen;varthr;varoff_p;varsen_m;varthr_m;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;" << endl;;
 
 }
 
