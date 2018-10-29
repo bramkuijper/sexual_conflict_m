@@ -1,7 +1,7 @@
-// sexual conflict with multiple offense and resistance traits
+// sexual conflict with maternal and paternal effects
 // 
 //
-//     Copyright (C) 2010 Bram Kuijper
+//     Copyright (C) 2017 Bram Kuijper
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
