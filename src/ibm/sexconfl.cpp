@@ -452,15 +452,24 @@ void WriteData()
 
     double off, sen, thr, off_p, sen_m, thr_m;
 
+    double mean_e_off = 0;
     double meanoff = 0;
+    double mean_e_sen = 0;
     double meansen = 0;
+    double mean_e_thr = 0;
     double meanthr = 0;
+
+    double ss_e_off = 0;
     double ssoff = 0;
+    double ss_e_sen = 0;
     double sssen = 0;
+    double ss_e_thr = 0;
     double ssthr = 0;
+
     double meanoff_p = 0;
     double meansen_m = 0;
     double meanthr_m = 0;
+
     double ssoff_p = 0;
     double sssen_m = 0;
     double ssthr_m = 0;
@@ -478,6 +487,10 @@ void WriteData()
         meanoff += off;
         meansen += sen;
         meanthr += thr;
+
+        mean_e_off += Males[i].e_off;
+        mean_e_sen += Males[i].e_sen;
+        mean_e_thr += Males[i].e_thr;
         
         meanoff_p += off_p;
         meansen_m += sen_m;
@@ -490,13 +503,17 @@ void WriteData()
         ssoff_p += off_p*off_p;
         sssen_m += sen_m*sen_m;
         ssthr_m += thr_m*thr_m;
+
+        ss_e_off += Males[i].e_off * Males[i].e_off;
+        ss_e_sen += Males[i].e_sen * Males[i].e_sen;
+        ss_e_thr += Males[i].e_thr * Males[i].e_thr;
 	}
 
 	for (int i = 0; i < Nfemales; ++i)
 	{
-        off = 0.5 * ( Females[i].off[0] + Females[i].off[1]);
-        sen = 0.5 * ( Females[i].sen[0] + Females[i].sen[1]);
-        thr = 0.5 * ( Females[i].thr[0] + Females[i].thr[1]);
+        off = 0.5 * (Females[i].off[0] + Females[i].off[1]);
+        sen = 0.5 * (Females[i].sen[0] + Females[i].sen[1]);
+        thr = 0.5 * (Females[i].thr[0] + Females[i].thr[1]);
         
         off_p = 0.5 * ( Females[i].off_p[0] + Females[i].off_p[1]);
         sen_m = 0.5 * ( Females[i].sen_m[0] + Females[i].sen_m[1]);
@@ -506,6 +523,10 @@ void WriteData()
         meansen += sen;
         meanthr += thr;
         
+        mean_e_off += Females[i].e_off;
+        mean_e_sen += Females[i].e_sen;
+        mean_e_thr += Females[i].e_thr;
+        
         meanoff_p += off_p;
         meansen_m += sen_m;
         meanthr_m += thr_m;
@@ -517,6 +538,10 @@ void WriteData()
         ssoff_p += off_p*off_p;
         sssen_m += sen_m*sen_m;
         ssthr_m += thr_m*thr_m;
+        
+        ss_e_off += Females[i].e_off * Females[i].e_off;
+        ss_e_sen += Females[i].e_sen * Females[i].e_sen;
+        ss_e_thr += Females[i].e_thr * Females[i].e_thr;
 	}
 
     double sum_sexes = Nmales + Nfemales;
@@ -524,6 +549,9 @@ void WriteData()
     meanoff /= sum_sexes;
     meansen /= sum_sexes;
     meanthr /= sum_sexes;
+    mean_e_off /= sum_sexes;
+    mean_e_sen /= sum_sexes;
+    mean_e_thr /= sum_sexes;
     meanoff_p /= sum_sexes;
     meansen_m /= sum_sexes;
     meanthr_m /= sum_sexes;
@@ -532,12 +560,18 @@ void WriteData()
             << meanoff << ";" 
             << meansen << ";" 
             << meanthr << ";" 
+            << mean_e_off << ";" 
+            << mean_e_sen << ";" 
+            << mean_e_thr << ";" 
             << meanoff_p << ";" 
             << meansen_m << ";" 
             << meanthr_m << ";" 
             << ssoff / sum_sexes - meanoff * meanoff << ";" 
             << sssen / sum_sexes  - meansen * meansen << ";" 
             << ssthr / sum_sexes - meanthr * meanthr << ";" 
+            << ss_e_off / sum_sexes - mean_e_off * mean_e_off << ";" 
+            << ss_e_sen / sum_sexes  - mean_e_sen * mean_e_sen << ";" 
+            << ss_e_thr / sum_sexes - mean_e_thr * mean_e_thr << ";" 
             << ssoff_p / sum_sexes - meanoff_p * meanoff_p << ";" 
             << sssen_m / sum_sexes  - meansen_m * meansen_m << ";" 
             << ssthr_m / sum_sexes - meanthr_m * meanthr_m << ";" 
@@ -552,7 +586,30 @@ void WriteData()
 
 void WriteDataHeaders()
 {
-	DataFile << "generation;meanoff;meansen;meanthr;meanoff_p;meansen_m;meanthr_m;varoff;varsen;varthr;varoff_p;varsen_m;varthr_m;Nm;Nf;Nmsurv;Nfsurv;Nfunmated;" << endl;;
+	DataFile << "generation;" << 
+        "meanoff;" << 
+        "meansen;" << 
+        "meanthr;" << 
+        "meanoff_phen;" <<
+        "meansen_phen;" << 
+        "meanthr_phen;" << 
+        "meanoff_p;" <<
+        "meansen_m;" << 
+        "meanthr_m;" << 
+        "varoff;" << 
+        "varsen;" << 
+        "varthr;" << 
+        "varoff_phen;" << 
+        "varsen_phen;" << 
+        "varthr_phen;" << 
+        "varoff_p;" << 
+        "varsen_m;" << 
+        "varthr_m;" << 
+        "Nm;" <<
+        "Nf;" <<
+        "Nmsurv;" <<
+        "Nfsurv;" <<
+        "Nfunmated;" << endl;
 
 }
 
