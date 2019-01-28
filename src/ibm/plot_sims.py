@@ -28,11 +28,33 @@ for idx, line in enumerate(fl):
         parline = idx - 1;
         break;
 
+parameters = None
+
+parameters_to_print = [ 
+                        "a",
+                        "coff",
+                        "cthr",
+                        "csen",
+                        "theta_psi",
+                        "mu_off_p",
+                        "mu_thr_m",
+                        "mu_sen_m"
+                        ]
+
 # read in the csv file
 if parline > 0:
     histdat = pd.read_csv(filename, nrows=parline-3, sep=";")
+    
+    parameters = pd.read_csv(
+            filename, 
+            skiprows = parline-1, 
+            sep=";", 
+            header=None)
+
+    parameters.columns = [ "parname", "parval", "wut"]
 else:
     histdat = pd.read_csv(filename, sep=";")
+
 
 # generate the figure
 
@@ -44,8 +66,20 @@ num_rows = 4
 if "meanoff_p" in histdat.columns.values:
     num_rows = 5
 
+
+titlestr=""
+
+if parameters is not None:
+    for index, row in parameters.iterrows():
+        if row["parname"].strip() in parameters_to_print:
+            titlestr+=row["parname"] \
+                        + "=" + \
+                        str(row["parval"]) + "; "
+
+
 # add first subplot
 plt.subplot(num_rows,1,1)
+plt.title(titlestr, fontsize=10)
 plt.plot(
         histdat["generation"],
         histdat["meanoff"],

@@ -1,7 +1,7 @@
-// sexual conflict with multiple offense and resistance traits
+// sexual conflict with maternal and paternal effects
 // 
 //
-//     Copyright (C) 2010 Bram Kuijper
+//     Copyright (C) 2017 Bram Kuijper
 //
 //    This program is free software: you can redistribute it and/or modify
 //    it under the terms of the GNU General Public License as published by
@@ -17,6 +17,8 @@
 //    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 //
 
+
+// load some libraries 
 #define NDEBUG
 //#define DISTRIBUTION
 #include <ctime>
@@ -27,6 +29,8 @@
 #include <string>
 #include <cmath>
 #include <cassert>
+
+// libraries for random number generations
 #include <gsl/gsl_rng.h>
 #include <gsl/gsl_randist.h>
 #include "bramauxiliary.h"
@@ -39,20 +43,21 @@ gsl_rng *r; // gnu scientific rng
 
 using namespace std;
 
-const int N = 5000;
-const int N_mate_sample = 10;
-const int clutch_size = 20;
+// define all the parameters
+const int N = 5000; // population size
+const int N_mate_sample = 10; // how many mates does each female encounter?
+const int clutch_size = 20; // how many eggs does she produce?
 double a = 1.0; // strength of selection against non-optimal # matings
 double cs = 0.5; // cost of sensitivity
-double ct = 0.5; // cost of     
-double co = 0.2; // cost of trait
-double const thr_opt = 2;
+double ct = 0.5; // cost of threshold
+double co = 0.2; // cost of offense trait
+double const thr_opt = 2; // optimal values for each of the traits
 double const sen_opt = 3;
 double const off_opt = 2;
-double const init_sen = sen_opt; // traits start at their optima
+double const init_sen = sen_opt; // specify initial values for each trait
 double const init_off = off_opt; 
 double const init_thr = thr_opt; 
-double gammathr = 2;
+double gammathr = 2; // strengths of selection
 double gammasen = 2;
 double const powoff = 2;
 double mu_off 	  = 0.05;            // mutation rate
