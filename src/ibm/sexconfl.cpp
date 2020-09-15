@@ -124,14 +124,15 @@ void initArguments(int argc, char *argv[])
 	mu_off_p = atof(argv[8]);
 	mu_thr_m = atof(argv[9]);
 	mu_sen_m = atof(argv[10]);
-	sdmu_off = atof(argv[11]);
-	sdmu_thr = atof(argv[12]);
-	sdmu_sen = atof(argv[13]);
-	sdmu_off_p = atof(argv[14]);
-	sdmu_thr_m = atof(argv[15]);
-	sdmu_sen_m = atof(argv[16]);
-    theta_psi = atof(argv[17]);
-    base_name = atof(argv[18]);
+	double sdmu = atof(argv[11]);
+	sdmu_off = sdmu;
+	sdmu_thr = sdmu;
+	sdmu_sen = sdmu;
+	sdmu_off_p = sdmu;
+	sdmu_thr_m = sdmu;
+	sdmu_sen_m = sdmu;
+    theta_psi = atof(argv[12]);
+    base_name = argv[13];
 }
 
 void Mutate(double &G, double const mu, double const sdmu)
