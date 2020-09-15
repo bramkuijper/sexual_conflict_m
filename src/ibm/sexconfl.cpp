@@ -18,8 +18,6 @@
 //
 
 
-// load some libraries 
-#define NDEBUG
 //#define DISTRIBUTION
 #include <ctime>
 #include <iostream>
@@ -29,19 +27,19 @@
 #include <string>
 #include <cmath>
 #include <cassert>
+#include <random>
 
-// libraries for random number generations
-#include <gsl/gsl_rng.h>
-#include <gsl/gsl_randist.h>
-#include "bramauxiliary.h"
+// C++ random number generation unsigned int seed = get_nanoseconds();
+std::random_device rd;
+unsigned seed = rd();
+std::mt19937 rng_r{seed};
 
-
-// random number generator 
-// see http://www.gnu.org/software/gsl/manual/html_node/Random-Number-Generation.html#Random-Number-Generation 
-gsl_rng_type const * T; // gnu scientific library rng type
-gsl_rng *r; // gnu scientific rng 
-
-using namespace std;
+// set up a uniform distribution between 0 and 1
+std::uniform_real_distribution<> uniform(0.0,1.0);
+// set up a bernoulli distribution that returns 0s or 1s
+// at equal probability to sample alleles from the first or
+// second set of chromosomes of diploid individuals
+std::bernoulli_distribution allele_sample(0.5);
 
 // define all the parameters
 const int N = 5000; // population size
@@ -59,7 +57,7 @@ double const init_off = off_opt;
 double const init_thr = thr_opt; 
 double gammathr = 2; // strengths of selection
 double gammasen = 2;
-double const powoff = 2;
+//double const powoff = 2;
 double mu_off 	  = 0.05;            // mutation rate
 double mu_off_p     = 0.05;            // mutation rate
 double mu_thr 	  = 0.05;            // mutation rate
@@ -76,12 +74,12 @@ const double NumGen = 50000;
 const int skip = 10;
 double theta_psi = 1;
 
+std::string base_name{};
 bool do_stats = 0;
 
 int generation = 0;
 int Nfemales = N / 2, Nmales = N / 2;
 int popsize = 0;
-unsigned seed = 0;
 int msurvivors = 0;
 int fsurvivors = 0;
 int unmated_f = 0;
@@ -114,15 +112,6 @@ Population Females, Males, FemaleSurvivors, MaleSurvivors;
 typedef Individual Kids[N*clutch_size];
 Kids NewPop;
 
-string filename("sim_sexualconflict");
-string filename_new(create_filename(filename));
-ofstream DataFile(filename_new.c_str());  // output file 
-
-#ifdef DISTRIBUTION
-string filename_new2(create_filename("sim_sexualconflict"));
-ofstream distfile(filename_new2.c_str());
-#endif //DISTRIBUTION
-
 void initArguments(int argc, char *argv[])
 {
 	a = atof(argv[1]);
@@ -142,56 +131,51 @@ void initArguments(int argc, char *argv[])
 	sdmu_thr_m = atof(argv[15]);
 	sdmu_sen_m = atof(argv[16]);
     theta_psi = atof(argv[17]);
+    base_name = atof(argv[18]);
 }
 
 void Mutate(double &G, double const mu, double const sdmu)
 {
-	G += gsl_rng_uniform(r)<mu ? gsl_ran_gaussian(r, sdmu) : 0;
-}
+    if (uniform(rng_r) < mu)
+    {
+        std::normal_distribution<> mutational_effect(0.0, sdmu);
+        G += mutational_effect(rng_r);
+    }
+} // end Mutate
 
-
-void WriteParameters()
+void WriteParameters(std::ofstream &DataFile)
 {
-	DataFile << endl
-		<< endl
-		<< "type;" << "sexual_conflict" << ";" << endl
-		<< "popsize_init;" << N << ";" << endl
-		<< "n_mate_sample;" << N_mate_sample << ";"<< endl
-		<< "a;" <<  a << ";"<< endl
-		<< "coff;" <<  co << ";"<< endl
-		<< "cthr;" <<  ct << ";"<< endl
-		<< "csen;" <<  cs << ";"<< endl
-		<< "thr_opt;" <<  thr_opt << ";"<< endl
-		<< "sen_opt;" <<  sen_opt << ";"<< endl
-		<< "off_opt;" <<  off_opt << ";"<< endl
-		<< "theta_psi;" << theta_psi << ";"<< endl
-		<< "mu_off;" <<  mu_off << ";"<< endl
-		<< "mu_thr;" <<  mu_thr << ";"<< endl
-		<< "mu_sen;" <<  mu_sen << ";"<< endl
-		<< "mu_off_p;" <<  mu_off_p << ";"<< endl
-		<< "mu_thr_m;" <<  mu_thr_m << ";"<< endl
-		<< "mu_sen_m;" <<  mu_sen_m << ";"<< endl
-		<< "mu_std_off;" <<  sdmu_off << ";"<< endl
-		<< "mu_std_thr;" <<  sdmu_thr << ";"<< endl
-		<< "mu_std_sen;" <<  sdmu_sen << ";"<< endl
-		<< "mu_std_off_p;" <<  sdmu_off_p << ";"<< endl
-		<< "mu_std_thr_m;" <<  sdmu_thr_m << ";"<< endl
-		<< "mu_std_sen_m;" <<  sdmu_sen_m << ";"<< endl
-		<< "seed;" << seed << ";"<< endl;
-}
+	DataFile << std::endl
+		<< std::endl
+		<< "type;" << "sexual_conflict" << ";" << std::endl
+		<< "popsize_init;" << N << ";" << std::endl
+		<< "n_mate_sample;" << N_mate_sample << ";"<< std::endl
+		<< "a;" <<  a << ";"<< std::endl
+		<< "coff;" <<  co << ";"<< std::endl
+		<< "cthr;" <<  ct << ";"<< std::endl
+		<< "csen;" <<  cs << ";"<< std::endl
+		<< "thr_opt;" <<  thr_opt << ";"<< std::endl
+		<< "sen_opt;" <<  sen_opt << ";"<< std::endl
+		<< "off_opt;" <<  off_opt << ";"<< std::endl
+		<< "theta_psi;" << theta_psi << ";"<< std::endl
+		<< "mu_off;" <<  mu_off << ";"<< std::endl
+		<< "mu_thr;" <<  mu_thr << ";"<< std::endl
+		<< "mu_sen;" <<  mu_sen << ";"<< std::endl
+		<< "mu_off_p;" <<  mu_off_p << ";"<< std::endl
+		<< "mu_thr_m;" <<  mu_thr_m << ";"<< std::endl
+		<< "mu_sen_m;" <<  mu_sen_m << ";"<< std::endl
+		<< "mu_std_off;" <<  sdmu_off << ";"<< std::endl
+		<< "mu_std_thr;" <<  sdmu_thr << ";"<< std::endl
+		<< "mu_std_sen;" <<  sdmu_sen << ";"<< std::endl
+		<< "mu_std_off_p;" <<  sdmu_off_p << ";"<< std::endl
+		<< "mu_std_thr_m;" <<  sdmu_thr_m << ";"<< std::endl
+		<< "mu_std_sen_m;" <<  sdmu_sen_m << ";"<< std::endl
+		<< "seed;" << seed << ";"<< std::endl;
+} // end WriteParameters()
 
 // initialize all the phenotypes
 void Init()
 {
-	seed = get_nanoseconds();
-
-    // set up the random number generators
-    // (from the gnu gsl library)
-    gsl_rng_env_setup();
-    T = gsl_rng_default;
-    r = gsl_rng_alloc(T);
-    gsl_rng_set(r, seed);
-    
     for (int i = 0; i < N/2; ++i)
     {
         Females[i].off[0] = init_off;
@@ -225,39 +209,39 @@ void Create_Kid(int mother, int father, Individual &kid)
 	assert(father >= 0 && father < msurvivors);
 
     // inherit offense trait
-    kid.off[0] = FemaleSurvivors[mother].off[gsl_rng_uniform_int(r, 2)];
+    kid.off[0] = FemaleSurvivors[mother].off[allele_sample(rng_r)];
     Mutate(kid.off[0], mu_off, sdmu_off);
-    kid.off[1] = MaleSurvivors[father].off[gsl_rng_uniform_int(r, 2)];
+    kid.off[1] = MaleSurvivors[father].off[allele_sample(rng_r)];
     Mutate(kid.off[1], mu_off, sdmu_off);
     
     // inherit offense trait paternal effect genes
-    kid.off_p[0] = FemaleSurvivors[mother].off_p[gsl_rng_uniform_int(r, 2)];
+    kid.off_p[0] = FemaleSurvivors[mother].off_p[allele_sample(rng_r)];
     Mutate(kid.off_p[0], mu_off_p, sdmu_off_p);
-    kid.off_p[1] = MaleSurvivors[father].off_p[gsl_rng_uniform_int(r, 2)];
+    kid.off_p[1] = MaleSurvivors[father].off_p[allele_sample(rng_r)];
     Mutate(kid.off_p[1], mu_off_p, sdmu_off_p);
 
     // inherit threshold
-    kid.thr[0] = FemaleSurvivors[mother].thr[gsl_rng_uniform_int(r, 2)];
+    kid.thr[0] = FemaleSurvivors[mother].thr[allele_sample(rng_r)];
     Mutate(kid.thr[0], mu_thr, sdmu_thr);
-    kid.thr[1] = MaleSurvivors[father].thr[gsl_rng_uniform_int(r, 2)];
+    kid.thr[1] = MaleSurvivors[father].thr[allele_sample(rng_r)];
     Mutate(kid.thr[1], mu_thr, sdmu_thr);
     
     // inherit threshold maternal effect genes
-    kid.thr_m[0] = FemaleSurvivors[mother].thr_m[gsl_rng_uniform_int(r, 2)];
+    kid.thr_m[0] = FemaleSurvivors[mother].thr_m[allele_sample(rng_r)];
     Mutate(kid.thr_m[0], mu_thr_m, sdmu_thr_m);
-    kid.thr_m[1] = MaleSurvivors[father].thr_m[gsl_rng_uniform_int(r, 2)];
+    kid.thr_m[1] = MaleSurvivors[father].thr_m[allele_sample(rng_r)];
     Mutate(kid.thr_m[1], mu_thr_m, sdmu_thr_m);
 
     // inherit sensitivity
-    kid.sen[0] = FemaleSurvivors[mother].sen[gsl_rng_uniform_int(r, 2)];
+    kid.sen[0] = FemaleSurvivors[mother].sen[allele_sample(rng_r)];
     Mutate(kid.sen[0], mu_sen, sdmu_sen);
-    kid.sen[1] = MaleSurvivors[father].sen[gsl_rng_uniform_int(r, 2)];
+    kid.sen[1] = MaleSurvivors[father].sen[allele_sample(rng_r)];
     Mutate(kid.sen[1], mu_sen, sdmu_sen);
 
     // inherit sen_msitivity maternal effect genes
-    kid.sen_m[0] = FemaleSurvivors[mother].sen_m[gsl_rng_uniform_int(r, 2)];
+    kid.sen_m[0] = FemaleSurvivors[mother].sen_m[allele_sample(rng_r)];
     Mutate(kid.sen_m[0], mu_sen_m, sdmu_sen_m);
-    kid.sen_m[1] = MaleSurvivors[father].sen_m[gsl_rng_uniform_int(r, 2)];
+    kid.sen_m[1] = MaleSurvivors[father].sen_m[allele_sample(rng_r)];
     Mutate(kid.sen_m[1], mu_sen_m, sdmu_sen_m);
 
     // express phenotypes
@@ -275,7 +259,7 @@ void Create_Kid(int mother, int father, Individual &kid)
 // threshold and sensitivity affect survival
 // psi affects fecundity
 // we vary this later
-void Survive()
+void Survive(std::ofstream &DataFile)
 {
     fsurvivors = 0;
     double w = 0;
@@ -289,7 +273,7 @@ void Survive()
                     - cs * pow(Females[i].e_sen - sen_opt,2));
 
         // female is surviving
-        if (gsl_rng_uniform(r) < w)
+        if (uniform(rng_r) < w)
         {
             FemaleSurvivors[fsurvivors++] = Females[i];
         }
@@ -304,7 +288,7 @@ void Survive()
 		w = exp(-co * pow(Males[i].e_off - off_opt, 2));
         
         // survival of males
-        if (gsl_rng_uniform(r) < w)
+        if (uniform(rng_r) < w)
         {
             MaleSurvivors[msurvivors++] = Males[i];
         }
@@ -312,7 +296,7 @@ void Survive()
 
     if (fsurvivors == 0 || msurvivors == 0)
     {
-        WriteParameters();
+        WriteParameters(DataFile);
 
         exit(1);
     }
@@ -337,8 +321,12 @@ void Choose(int &mother, int &offspring)
     // when they mate this will be costly
 	for (int i = 0; i < encounters; ++i)
 	{
+        std::uniform_int_distribution<> mate_distribution(
+                0,
+                msurvivors - 1);
+
 		// get a random male survivor
-		int random_mate = gsl_rng_uniform_int(r, msurvivors);
+		int random_mate = mate_distribution(rng_r);
         
         // calculate the mating rate
         // see p. 57 2nd column in Rowe et al
@@ -354,7 +342,7 @@ void Choose(int &mother, int &offspring)
         double psi = 1.0 / (1.0 + ((1.0/theta_psi) - 1.0) * exp(-signal)); // no signal: psi = 0.5
 
         // will this male mate with this female?
-        if (gsl_rng_uniform(r) < psi)
+        if (uniform(rng_r) < psi)
         {
             mates[nMatings++]=random_mate;
         }
@@ -370,7 +358,7 @@ void Choose(int &mother, int &offspring)
     // rounding of a continuous fecundity number to a discrete one
     double delta_round = fecundity_continuous - fecundity;
 
-    if (gsl_rng_uniform(r) < delta_round)
+    if (uniform(rng_r) < delta_round)
     {
         ++fecundity;
     }
@@ -381,10 +369,23 @@ void Choose(int &mother, int &offspring)
     // randomly distributed over mates
     if (nMatings > 0)
     {
+        // make a distribution of all fathers
+        // and pick from therer
+        std::uniform_int_distribution<> father_distribution(
+                0,
+                nMatings - 1);
+
         for (int i = 0; i < fecundity; ++i)
         {
-            int randnum = gsl_rng_uniform_int(r, nMatings);
+            int randnum = father_distribution(rng_r);
+
+            assert(randnum >= 0);
+            assert(randnum < nMatings);
+
             int current_father = mates[randnum];
+            
+            assert(current_father >= 0);
+            assert(current_father < msurvivors);
 
             Individual Kid;
             Create_Kid(mother, current_father, Kid);
@@ -400,7 +401,7 @@ void Choose(int &mother, int &offspring)
 // choose the mate
 // this is a simple unilateral mate choice function
 // later on we have to think about mutual mate choice
-void NextGen()
+void NextGen(std::ofstream &DataFile)
 {
     int offspring = 0;
 
@@ -414,7 +415,7 @@ void NextGen()
     
     if (offspring == 0)
     {
-        WriteParameters();
+        WriteParameters(DataFile);
         exit(1);
     }
 
@@ -425,16 +426,25 @@ void NextGen()
 
     popsize = offspring < N ? offspring : N;
 
+
+    std::uniform_int_distribution<> offspring_distribution(
+            0,
+            offspring - 1);
+
     // replace population with offspring
     for (int i = 0; i < popsize; ++i)
     {
-        if (gsl_rng_uniform(r) < 0.5)
+        int random_offspring = offspring_distribution(rng_r);
+        assert(random_offspring >= 0);
+        assert(random_offspring < offspring);
+
+        if (uniform(rng_r) < 0.5)
         {
-            Males[sons++] = NewPop[gsl_rng_uniform_int(r, offspring)];
+            Males[sons++] = NewPop[random_offspring];
         }
         else
         {
-            Females[daughters++] = NewPop[gsl_rng_uniform_int(r, offspring)];
+            Females[daughters++] = NewPop[random_offspring];
         }
     }
 
@@ -442,11 +452,11 @@ void NextGen()
     Nfemales = daughters;
 }
 
-void WriteData()
+void WriteData(std::ofstream &DataFile)
 {
 	if (Nmales == 0 || Nfemales == 0)
 	{
-		WriteParameters();
+		WriteParameters(DataFile);
 		exit(1);
 	}
 
@@ -580,11 +590,11 @@ void WriteData()
             << msurvivors << ";"
             << fsurvivors << ";"
             << unmated_f << ";"
-            << endl;
+            << std::endl;
 
 }
 
-void WriteDataHeaders()
+void WriteDataHeaders(std::ofstream &DataFile)
 {
 	DataFile << "generation;" << 
         "meanoff;" << 
@@ -609,29 +619,32 @@ void WriteDataHeaders()
         "Nf;" <<
         "Nmsurv;" <<
         "Nfsurv;" <<
-        "Nfunmated;" << endl;
-
+        "Nfunmated;" << std::endl;
 }
 
 int main(int argc, char ** argv)
 {
 	initArguments(argc, argv);
-	WriteDataHeaders();
+    
+    std::ofstream DataFile(base_name + ".csv");
+
+	WriteDataHeaders(DataFile);
+
 	Init();
 
 	for (generation = 0; generation <= NumGen; ++generation)
 	{
 		do_stats = generation % skip == 0;
 
-		Survive();
+		Survive(DataFile);
 		
-        NextGen();
+        NextGen(DataFile);
         
         if (do_stats)
 		{
-			WriteData();
+			WriteData(DataFile);
 		}
 	}
 
-	WriteParameters();
+	WriteParameters(DataFile);
 }

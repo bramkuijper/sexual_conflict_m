@@ -1,8 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import numpy as np
+import datetime
 
-exename = "./xsexconfl"
+exename = "./xsexconfl_m"
 
 
 a = [0.01, 0.1, 0.5, 2, 5 ]
@@ -13,6 +14,10 @@ theta_psi = [ 0.5, 1.0, 2.0, 0.1 ]
 
 ctr = 0
 
+date = datetime.datetime.now()
+base_name = "sim_cue_integration_" +\
+        f"{date:%d}_{date:%m}_{date:%Y}_{date:%H}{date:%M}{date:%S}"
+
 for a_i in a:
     for co_i in co:
         for ct_i in ct:
@@ -20,12 +25,16 @@ for a_i in a:
                 for theta_psi_i in theta_psi:
 
                     ctr += 1
+                    base_name_i = base_name + "_" + str(ctr)
+
                     print("echo " + str(ctr))
                     print(exename + " " + str(a_i)
                             + " " + str(co_i) + " " + str(ct_i)
                             + " " + str(cs_i)
                             + " 0.01 0.01 0.01 0.02 0.02 0.02"
-                            + " " + str(theta_psi_i))
+                            + " " + str(theta_psi_i)
+                            + " " + base_name_i
+                            )
 #	a = atof(argv[1]);
 #	co = atof(argv[2]);
 #	ct = atof(argv[3]);
