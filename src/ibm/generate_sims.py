@@ -3,7 +3,7 @@
 import numpy as np
 import datetime
 
-exename = "./xsexconfl_m"
+exename = "./xsexconfl_m.exe"
 
 
 a = [0.01, 0.1, 0.5, 2, 5 ]
