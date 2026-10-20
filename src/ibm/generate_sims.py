@@ -12,10 +12,12 @@ ct = [ 0.001, 0.01, 0.1, 0.2 ]
 cs = [ 0.001, 0.01, 0.1, 0.2 ]
 theta_psi = [ 0.5, 1.0, 2.0, 0.1 ]
 
+sdmu = 0.02
+
 ctr = 0
 
 date = datetime.datetime.now()
-base_name = "sim_cue_integration_" +\
+base_name = "sim_sexconfl_m_" +\
         f"{date:%d}_{date:%m}_{date:%Y}_{date:%H}{date:%M}{date:%S}"
 
 for a_i in a:
@@ -29,9 +31,11 @@ for a_i in a:
 
                     print("echo " + str(ctr))
                     print(exename + " " + str(a_i)
-                            + " " + str(co_i) + " " + str(ct_i)
+                            + " " + str(co_i) 
+                            + " " + str(ct_i)
                             + " " + str(cs_i)
                             + " 0.01 0.01 0.01 0.02 0.02 0.02"
+                            + " " + str(sdmu)
                             + " " + str(theta_psi_i)
                             + " " + base_name_i
                             )
